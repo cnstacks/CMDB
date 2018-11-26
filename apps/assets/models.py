@@ -359,3 +359,58 @@ class NewAssetApprovalZone(models.Model):
         verbose_name = '新上线待批准资产'
         verbose_name_plural = "新上线待批准资产"
         ordering = ['-c_time']
+
+
+class CPU(models.Model):
+    """CPU组件"""
+
+    asset = models.OneToOneField('Asset', on_delete=models.CASCADE)  # 设备上的cpu肯定都是一样的，所以不需要建立多个cpu数据，一条就可以，因此使用一对一。
+    cpu_model = models.CharField('CPU型号', max_length=128, blank=True, null=True)
+    cpu_count = models.PositiveSmallIntegerField('物理CPU个数', default=1)
+    cpu_core_count = models.PositiveSmallIntegerField('CPU核数', default=1)
+
+    def __str__(self):
+        return self.asset.name + ":   " + self.cpu_model
+
+    class Meta:
+        verbose_name = 'CPU'
+        verbose_name_plural = "CPU"
+
+
+class RAM(models.Model):
+    """内存组件"""
+
+    asset = models.ForeignKey('Asset', on_delete=models.CASCADE)  # 只能通过外键关联Asset。否则不能同时关联服务器、网络设备等等。
+    sn = models.CharField('SN号', max_length=128, blank=True, null=True)
+    model = models.CharField('内存型号', max_length=128, blank=True, null=True)
+    manufacturer = models.CharField('内存制造商', max_length=128, blank=True, null=True)
+    slot = models.CharField('插槽', max_length=64)
+    capacity = models.IntegerField('内存大小(GB)', blank=True, null=True)
+
+    def __str__(self):
+        return '%s: %s: %s: %s' % (self.asset.name, self.model, self.slot, self.capacity)
+
+    class Meta:
+        verbose_name = '内存'
+        verbose_name_plural = "内存"
+        unique_together = ('asset', 'slot')  # 同一资产下的内存，根据插槽的不同，必须唯一
+
+
+class NIC(models.Model):
+    """网卡组件"""
+
+    asset = models.ForeignKey('Asset', on_delete=models.CASCADE)  # 注意要用外键
+    name = models.CharField('网卡名称', max_length=64, blank=True, null=True)
+    model = models.CharField('网卡型号', max_length=128)
+    mac = models.CharField('MAC地址', max_length=64)  # 虚拟机有可能会出现同样的mac地址
+    ip_address = models.GenericIPAddressField('IP地址', blank=True, null=True)
+    net_mask = models.CharField('掩码', max_length=64, blank=True, null=True)
+    bonding = models.CharField('绑定地址', max_length=64, blank=True, null=True)
+
+    def __str__(self):
+        return '%s:  %s:  %s' % (self.asset.name, self.model, self.mac)
+
+    class Meta:
+        verbose_name = '网卡'
+        verbose_name_plural = "网卡"
+        unique_together = ('asset', 'model', 'mac')  # 资产、型号和mac必须联合唯一。防止虚拟机中的特殊情况发生错误。
